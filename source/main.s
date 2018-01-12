@@ -1,36 +1,50 @@
-@ the needed styles
 .section .init
 .globl _start
 _start:
+b main
 
-@GPIO Controller Address--20200000
-@00 - 24:Function Select
-@28 - 36:Turn On Pin
-@40 - 48:Turn Off Pin
-@52 - 60:Pin Input
+.section .text
+main:
+mov sp, #0x8000
+
 ldr r0,= 0x20200000
 
-@ mov is faster than ldr because it does not involve a memory interaction will ldr does
-@ mov can only used to load certain values
 mov r1, #1
 
-@ the manual says that there is a set of 24 bytes in the GPIO controller
-@ the first 4 bits relate to the first 10 GPIO pins and so on; there are 54 GPIO pins
-@ #18(6x3) every 3 bits relates to a particular GPIO pin
 lsl r1, #18
-@ enable output
 str r1, [r0, #4]
 
-@ send messages to the GPIO controller to trun pin 16 off
-@ it make the LED turn on; the ok led is wired to the 16th GPIO pin
 mov r1, #1
 
-@ 16th pin
 lsl r1, #16
 
-@ pin off ; #28 will on
 str r1, [r0, #40]
 
-@ the processor will never finsh, so let it loop
+ptrn .req r4
+ldr ptrn, =pattern
+ldr ptrn, [ptrn]
+seq .req r5
+mov seq, #0
+
+mov r1, #1
+lsl r1, seq
+and r1, ptrn
+
+
 loop$:
 b loop$
+
+mov r2, #0x3F0000
+wait1$:
+sub r2, #1
+@ remember the results in the current processor status register
+cmp r2, #0
+@ ne--the command executed only if the last comparison  the numbers were not equal
+bne wait1$
+
+@ to differentiate between data and code, we put all the data int the .data
+.section .data
+@ this data will be placed at an address which is a multiple of 2^2 = 4; ldr only works at address that are multiple of 4
+.align 2
+pattern:
+.int 0b11111111101010100010001000101010
